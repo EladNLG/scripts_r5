@@ -68,6 +68,7 @@ global function UICallback_DisableTriggerStrafing
 global function UpdateHealHint
 global function GroundListUpdateNextFrame
 global function GetCountForLootType
+global function RegisterUseFunctionForItem
 
 global enum eGroundListBehavior
 {
@@ -234,6 +235,10 @@ void function Survival_DropInventoryItem( string ref, int num )
 	ResetInventoryMenu( player )
 }
 
+void function RegisterUseFunctionForItem( string ref, void functionref(entity, string) func )
+{
+	file.itemUseFunctions[ ref ] <- func
+}
 
 void function Survival_DropEquipment( string ref )
 {
@@ -434,7 +439,7 @@ void function UICallback_BackpackOpened()
 
 void function UICallback_BackpackClosed()
 {
-	#if R5DEV
+	#if DEVELOPER
 		if ( !IsValidSignal( "BackpackClosed" ) ) //
 			return
 	#endif
@@ -941,7 +946,7 @@ void function UICallback_UpdateEquipmentButton( var button )
 			if ( IsValidItemFlavorNetworkIndex_DEPRECATED( weapon.GetGrade(), eValidation.DONT_ASSERT ) )
 			{
 				ItemFlavor weaponSkin = GetItemFlavorByNetworkIndex_DEPRECATED( weapon.GetGrade() )
-				ItemFlavor weaponCharm = GetItemFlavorByNetworkIndex_DEPRECATED( weapon.GetWeaponCharmIndex() )
+				ItemFlavor weaponCharm = GetItemFlavorByNetworkIndex_DEPRECATED( weapon.GetGrade() )//TODO: FIX THIS!!!! weapon.GetWeaponCharmIndex()
 				RuiSetString( rui, "skinName", ItemFlavor_GetLongName( weaponSkin ) )
 				if ( ItemFlavor_HasQuality( weaponSkin ) )
 					RuiSetInt( rui, "skinTier", ItemFlavor_GetQuality( weaponSkin ) + 1 )

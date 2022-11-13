@@ -8,7 +8,7 @@ global function GetRespawnStyle
 global function RespawnBeacons_OnSquadEliminated
 global function RespawnBeacon_PutPlayerInDropship
 global function AddCallback_OnDNAPickupDestroyed
-#if R5DEV
+#if DEVELOPER
 global function RespawnPlayersInDropship
 global function RespawnPlayersInDropshipAtPoint
 #endif
@@ -74,7 +74,10 @@ global struct dropshipAnimData
 	bool hideProxy = true
 	void functionref( entity ) viewConeFunc
 	float yawAngle
-	string firstPersonJumpOutSound // Unfortunately first person anims play for everybody, not just the person who the anim is played upon, so script needs to play the sound as opposed to a qc entry
+
+	// Unfortunately first person anims play for everybody, not just the person who the anim is played upon,
+	// so script needs to play the sound as opposed to a qc entry
+	string firstPersonJumpOutSound
 }
 
 struct
@@ -401,39 +404,51 @@ void function RespawnPlayersInDropship( array<entity> players, entity beacon )
 
 void function RespawnPlayersInDropshipAtPoint( array<entity> players, vector origin, vector angles )
 {
-	entity dropship = CreateEntity( "npc_dropship" )
-	SetSpawnOption_AISettings( dropship, "npc_dropship_respawn" )
-	SetTargetName( dropship, RESPAWN_DROPSHIP_TARGETNAME )
-	DispatchSpawn( dropship )
-	dropship.SetInvulnerable()
-	dropship.DisableHibernation()
-	EmitSoundOnEntity( dropship, "goblin_imc_evac_hover" )
-	thread JetwashFX( dropship )
+    entity dropship = CreateEntity( "npc_dropship" )
+    SetSpawnOption_AISettings( dropship, "npc_dropship_respawn" )
+    SetTargetName( dropship, RESPAWN_DROPSHIP_TARGETNAME )
+    DispatchSpawn( dropship )
+    dropship.SetInvulnerable()
+    dropship.DisableHibernation()
+    thread JetwashFX( dropship )
 
-	dropship.DisableGrappleAttachment()
+    dropship.DisableGrappleAttachment()
 
-	dropship.SetOrigin( origin )
-	dropship.SetAngles( angles )
-	Attachment attachResult = dropship.Anim_GetAttachmentAtTime( "dropship_classic_mp_flyin", "ORIGIN", 0.0 )
+    dropship.SetOrigin( origin )
+    dropship.SetAngles( angles )
+    Attachment attachResult = dropship.Anim_GetAttachmentAtTime( "dropship_classic_mp_flyin", "ORIGIN", 0.0 )
 
-	int i=0
-	foreach ( player in players )
-	{
-		if ( IsValid( player ) )
-		{
-			thread RespawnBeacon_PutPlayerInDropship( player, dropship, i, attachResult.position )
-		}
-		i++
-	}
+    int i = 0
+    foreach ( player in players )
+    {
+        if ( IsValid( player ) )
+        {
+            thread RespawnBeacon_PutPlayerInDropship( player, dropship, i, attachResult.position )
+        }
+        i++
+    }
 
-	EndSignal( dropship, "OnDestroy" )
+    EmitSoundOnEntity( dropship, "goblin_imc_evac_hover" )
+    EndSignal( dropship, "OnDestroy" )
 
-	thread PlayAnim( dropship, "dropship_classic_mp_flyin_idle", origin, angles )
-	dropship.MakeInvisible()
-	waitthread __WarpInEffectShared( attachResult.position, attachResult.angle, "dropship_warpin", 0.0 )
-	dropship.MakeVisible()
-	waitthread PlayAnim( dropship, "dropship_classic_mp_flyin", origin, angles )
-	dropship.Destroy()
+    // Fix anim bug with this of it getting weirdly teleported.
+    thread PlayAnim( dropship, "dropship_classic_mp_flyin_idle", origin, angles )
+
+    // Warp in now.
+    dropship.MakeInvisible()
+    waitthread __WarpInEffectShared( attachResult.position, attachResult.angle, "dropship_warpin", 0.0 )
+    dropship.MakeVisible()
+
+    thread PlayAnim( dropship, "dropship_classic_mp_flyin", origin, angles )
+
+    // Wait for correct time to warp out
+    wait dropship.GetSequenceDuration( "dropship_classic_mp_flyin" ) - 5
+
+    // Hide dropShip now and warpout.
+    dropship.Hide()
+    __WarpOutEffectShared( dropship )
+
+    dropship.Destroy()
 }
 
 
@@ -603,23 +618,6 @@ string function RespawnDNA_TextOverride( entity ent )
 
 float function GetRespawnStationUseTime( entity ent )
 {
-	switch( ent.GetTargetName() )
-	{
-#if(false)
-
-
-#endif //
-
-#if(false)
-
-
-
-#endif //
-
-		default:
-			return RESPAWN_BEACON_RESPAWN_TIME
-	}
-
 	return RESPAWN_BEACON_RESPAWN_TIME
 }
 
@@ -652,7 +650,7 @@ void function RespawnChamberOnUse( entity pickup, entity player, int pickupFlags
 		settings.exclusiveUse = true
 		settings.movementDisable = true
 		settings.holsterWeapon = true
-		#endif
+	#endif
 	settings.duration = GetRespawnStationUseTime( pickup )
 	settings.useInputFlag = IN_USE_LONG
 
@@ -789,7 +787,6 @@ void function DestroyItem( entity ent, entity playerUser )
 	ent.Dissolve( ENTITY_DISSOLVE_CORE, <0,0,0>, 500 )
 }
 #endif
-
 
 #if CLIENT
 void function ServerCallback_DisplayWaitingForRespawn( entity ent, float startTime, float endTime )
@@ -1036,9 +1033,12 @@ void function RespawnBeacon_PutPlayerInDropship( entity player, entity ship, int
 	AddCinematicFlag( player, CE_FLAG_EMBARK ) // DoF
 	player.SetPlayerNetInt( "respawnStatus", eRespawnStatus.WAITING_FOR_DROPPOD )
 
-	entity dummyEnt = CreatePropDynamic( $"mdl/humans/class/medium/pilot_medium_bloodhound.rmdl" ) // TODO: use generic model.  Can't use player settings here since they could be a spectator
+	// TODO: use generic model.  Can't use player settings here since they could be a spectator
+	entity dummyEnt = CreatePropDynamic( $"mdl/humans/class/medium/pilot_medium_bloodhound.rmdl" )
+
 	float idleTime = dummyEnt.GetSequenceDuration( animData.idleAnim )
 	float jumpTime = dummyEnt.GetSequenceDuration( animData.jumpAnim )
+
 	float totalTime = idleTime + jumpTime
 
 	Remote_CallFunction_NonReplay( player, "ServerCallback_RespawnPodStarted", Time() + totalTime )
@@ -1047,6 +1047,7 @@ void function RespawnBeacon_PutPlayerInDropship( entity player, entity ship, int
 	player.p.respawnPod = ship
 	player.StartObserverMode( OBS_MODE_CHASE )
 	player.SetObserverTarget( ship )
+	player.SetPlayerCanToggleObserverMode(false)
 
 	ScreenFadeFromBlack( player, 1.0, 1.0 )
 
@@ -1280,16 +1281,6 @@ bool function IsRespawnStationPingType( int pingType )
 	{
 		case ePingType.RESPAWN_STATION:
 			return true
-#if(false)
-
-
-
-#endif //
-#if(false)
-
-
-
-#endif //
 	}
 
 	return false
@@ -1418,19 +1409,10 @@ bool function IsRespawnStationEnt( entity ent )
 		case RESPAWN_CHAMBER_TARGETNAME:
 			return true
 
-#if(false)
+#if false
 // 3 lines
-#endif //
-
-#if(false)
-// 3 lines
-#endif //
+#endif
 	}
 
 	return false
 }
-
-#if(false)
-// 20 lines
-#endif
-

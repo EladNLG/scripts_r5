@@ -148,9 +148,9 @@ global function OpenXboxPartyApp
 global function OpenXboxHelp
 #endif //DURANGO_PROG
 
-#if R5DEV
+#if DEVELOPER
 global function OpenDevMenu
-#endif // R5DEV
+#endif // DEVELOPER
 
 struct
 {
@@ -193,7 +193,11 @@ void function UICodeCallback_ActivateMenus()
 	if ( IsConnected() )
 		return
 
-	var mainMenu = GetMenu( "MainMenu" )
+	//Old MainMenu
+	//var mainMenu = GetMenu( "MainMenu" )
+
+	//New R5RMainMenu
+	var mainMenu = GetMenu( "R5RMainMenu" )
 
 	printt( "UICodeCallback_ActivateMenus:", GetActiveMenu() && Hud_GetHudName( GetActiveMenu() ) != "" )
 	if ( uiGlobal.menuStack.len() == 0 )
@@ -217,11 +221,12 @@ void function UICodeCallback_ToggleInGameMenu()
 
 	var activeMenu = GetActiveMenu()
 	bool isLobby   = IsLobby()
+	string playlistName = GetCurrentPlaylistName()
 
 	if ( isLobby )
 	{
 		if ( activeMenu == null )
-			AdvanceMenu( GetMenu( "LobbyMenu" ) )
+			AdvanceMenu( GetMenu( "R5RLobbyMenu" ) )
 		else if ( activeMenu == GetMenu( "SystemMenu" ) )
 			CloseActiveMenu()
 		return
@@ -469,6 +474,12 @@ void function UICodeCallback_LevelLoadingFinished( bool error )
 void function UICodeCallback_LevelInit( string levelname )
 {
 	printt( "UICodeCallback_LevelInit: " + levelname + ", IsConnected(): ", IsConnected() )
+	
+	if ( GetCurrentPlaylistVarBool( "random_loadscreen", true ) )
+	{	
+		if ( RandomFloat( 1.0 ) >= 0.90 ) // 10% chance to load a custom loadscreen
+			SetCustomLoadScreen( $"loadscreens/custom/loadscreen_r5r_community_01" )
+	}
 }
 
 
@@ -493,7 +504,7 @@ void function UICodeCallback_FullyConnected( string levelname )
 
 	InitXPData()
 
-	#if R5DEV
+	#if DEVELOPER
 		ShDevUtility_Init()
 	#endif
 
@@ -546,10 +557,9 @@ void function UICodeCallback_FullyConnected( string levelname )
 	//ShWeaponXP_Init()
 	//ShFactionXP_Init()
 
-	#if R5DEV
+	#if DEVELOPER
 		UpdatePrecachedSPWeapons()
 	#endif
-
 
 	if ( !uiGlobal.loadoutsInitialized )
 	{
@@ -1044,10 +1054,12 @@ void function UpdateMenusOnConnectThread( string levelname )
 	Assert( GetActiveMenu() != null || uiGlobal.menuStack.len() == 0 )
 
 	bool isLobby = IsLobbyMapName( levelname )
+	string playlistName = GetCurrentPlaylistName()
 
 	if ( isLobby )
 	{
-		AdvanceMenu( GetMenu( "LobbyMenu" ) )
+		AdvanceMenu( GetMenu( "R5RLobbyMenu" ) )
+
 		UIMusicUpdate()
 
 		if ( IsFullyConnected() )
@@ -1151,9 +1163,6 @@ bool function TryDialogFlowPersistenceQuery( string persistenceVar )
 
 void function DialogFlow()
 {
-	if ( !IsPlayPanelCurrentlyTopLevel() )
-		return
-
 	bool persistenceAvailable   = IsPersistenceAvailable()
 	string earliestRankedPeriod = Ranked_EarliestRankedPeriodWithRewardsNotAcknowledged()
 
@@ -1510,6 +1519,54 @@ void function InitMenus()
 
 	AddMenu( "PlayVideoMenu", $"resource/ui/menus/play_video.menu", InitPlayVideoMenu )
 	AddMenu( "EliteIntroMenu", $"resource/ui/menus/elite_intro.menu", InitEliteIntroMenu )
+
+	//R5Reloaded UI
+	var r5rmainMenu = AddMenu( "R5RMainMenu", $"scripts/resource/ui/menus/R5R/main.res", InitR5RMainMenu, "#MAIN" )
+	AddPanel( r5rmainMenu, "R5RMainMenuPanel", InitR5RMainMenuPanel )
+
+	var r5rlobbymenu = AddMenu( "R5RLobbyMenu", $"scripts/resource/ui/menus/R5R/lobbymenu.res", InitR5RLobbyMenu )
+	AddPanel( r5rlobbymenu, "R5RHomePanel", InitR5RHomePanel )
+	AddPanel( r5rlobbymenu, "R5RServerBrowserPanel", InitR5RServerBrowserPanel )
+	AddPanel( r5rlobbymenu, "R5RNamePanel", InitR5RNamePanel )
+	AddPanel( r5rlobbymenu, "R5RDescPanel", InitR5RDescPanel )
+	AddPanel( r5rlobbymenu, "R5RKickPanel", InitR5RKickPanel )
+	AddPanel( r5rlobbymenu, "R5RStartingPanel", InitR5RStartingPanel )
+	AddPanel( r5rlobbymenu, "R5RConnectingPanel", InitR5RConnectingPanel )
+
+	var privatematchmenu = AddPanel( r5rlobbymenu, "R5RPrivateMatchPanel", InitR5RPrivateMatchMenu )
+	AddPanel( privatematchmenu, "R5RPlaylistPanel", InitR5RPlaylistPanel )
+	AddPanel( privatematchmenu, "R5RMapPanel", InitR5RMapPanel )
+	AddPanel( privatematchmenu, "R5RVisPanel", InitR5RVisPanel )
+	////////
+
+	//CTF UI
+	var controlmenu = AddMenu( "CTFRespawnMenu", $"scripts/resource/ui/menus/CTF/ctfrespawnmenu.menu", InitCTFRespawnMenu )
+	var ctfvotemenu = AddMenu( "CTFVoteMenu", $"scripts/resource/ui/menus/CTF/ctfvotemenu.menu", InitCTFVoteMenu )
+	////////
+	//AIM TRAINER
+	//Main Menu
+	AddMenu( "FRChallengesMainMenu", $"scripts/resource/ui/menus/FRChallenges/mainmenu_main.menu", InitFRChallengesMainMenu )
+	
+	//Settings
+	AddMenu( "FRChallengesSettings", $"scripts/resource/ui/menus/FRChallenges/mainmenu_settings.menu", InitFRChallengesSettings )
+	
+	//History
+	AddMenu( "FRChallengesHistory", $"scripts/resource/ui/menus/FRChallenges/mainmenu_history.menu", InitChallengesHistory )
+	
+	//Weapon Selector
+	var weaponselector = AddMenu( "FRChallengesSettingsWpnSelector", $"scripts/resource/ui/menus/FRChallenges/mainmenu_settings_weaponselector.menu", InitFRChallengesSettingsWpnSelector )
+	AddPanel( weaponselector, "BuyMenu1", InitArenasBuyPanel1 )
+	AddPanel( weaponselector, "BuyMenu2", InitArenasBuyPanel2 )
+	AddPanel( weaponselector, "BuyMenu3", InitArenasBuyPanel3 )
+	AddPanel( weaponselector, "BuyMenu4", InitArenasBuyPanel4 )
+	AddPanel( weaponselector, "BuyMenu5", InitArenasBuyPanel5 )
+
+	//results
+	AddMenu( "FRChallengesMenu", $"scripts/resource/ui/menus/FRChallenges/challenges_results.menu", InitFRChallengesResultsMenu ) //results
+	
+	//Custom KillReplayHud
+	var killreplayhud = AddMenu( "KillReplayHud", $"scripts/resource/ui/menus/KillReplay/replayhud.menu", InitKillReplayHud )
+	///////
 
 	var lobbyMenu = AddMenu( "LobbyMenu", $"resource/ui/menus/lobby.menu", InitLobbyMenu )
 	AddPanel( lobbyMenu, "PlayPanel", InitPlayPanel )
@@ -2474,12 +2531,12 @@ void function OpenXboxHelp( var button )
 }
 #endif // DURANGO_PROG
 
-#if R5DEV
+#if DEVELOPER
 void function OpenDevMenu( var button )
 {
 	AdvanceMenu( GetMenu( "DevMenu" ) )
 }
-#endif //R5DEV
+#endif // DEVELOPER
 
 void function SetDialog( var menu, bool val )
 {

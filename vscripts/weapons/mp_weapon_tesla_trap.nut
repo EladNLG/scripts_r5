@@ -167,7 +167,7 @@ struct TeslaTrapPlayerPlacementData
 	int    maxLinks
 	vector viewOrigin
 	vector viewForward
-	vector playerOrigin 
+	vector playerOrigin
 	vector playerForward
 
 }
@@ -418,9 +418,6 @@ var function OnWeaponPrimaryAttack_weapon_tesla_trap( entity weapon, WeaponPrima
 		return 0
 	}
 
-	#if SERVER
-	#endif
-
 	PlayerUsedOffhand( ownerPlayer, weapon, true, null, {pos = placementInfo.origin} )
 
 	if ( IsValid( placementInfo.snapTo ) )
@@ -435,8 +432,13 @@ var function OnWeaponPrimaryAttack_weapon_tesla_trap( entity weapon, WeaponPrima
 
 		return 0
 	}
-
 	else
+		printf("aaaaaaa")
+		#if SERVER
+			thread WeaponMakesTeslaTrap(weapon, TESLA_TRAP_MODEL, placementInfo)
+			// TODO: only play this line the first time place places her fence per tac use
+			PlayBattleChatterLineToSpeakerAndTeam( ownerPlayer, "bc_tactical" )
+		#endif
 		return  weapon.GetAmmoPerShot()
 }
 
@@ -1834,7 +1836,7 @@ void function ClientCodeCallback_TeslaTrapVisibilityChanged( entity trigger, ent
 	{
 		foreach( int fxID in file.linkFXs_client[triggerFXID] )
 			EffectStop( fxID, false, true )
-		
+
 		file.linkFXs_client[triggerFXID] <- []
 
 		if ( triggerFXID in file.linkAGs_client )
@@ -1868,7 +1870,7 @@ void function CodeCallback_TeslaTrapCrossed( entity trigger, entity start, entit
 		int triggerFXID = trigger.GetTeslaLinkFXIdx()
 		foreach( int fxID in file.linkFXs_client[triggerFXID] )
 			EffectStop( fxID, false, true )
-			
+
 		file.linkFXs_client[triggerFXID] <- []
 
 		entity ambientGeneric = file.linkAGs_client[ triggerFXID ]
@@ -1998,3 +2000,14 @@ bool function TeslaTrap_IsLinkAngleTooSteep( vector proxyTestPos, entity otherTr
 
 	return false
 }
+
+#if SERVER
+// This is the serverside function to actually place the fence node.
+// Written by mostlyfireproof
+void function WeaponMakesTeslaTrap( entity weapon, asset model, TeslaTrapPlacementInfo placementInfo ) {
+	printf("Placing a node")
+	entity trap = CreatePropDynamic(model, placementInfo.origin, placementInfo.angles, 0)
+	trap.SetScriptName("fence_node")
+
+}
+#endif

@@ -109,7 +109,7 @@ void function ShUtilityAll_Init()
 	RegisterSignal( "CancelTimeout" )
 
 	//
-	#if(!UI)
+	#if !UI
 		PrecacheModel( $"mdl/fx/fire_cylinder_sm1.rmdl" )
 		PrecacheModel( $"mdl/fx/r301_leg07_fire_horns.rmdl" )
 		PrecacheModel( $"mdl/fx/r301_leg07_fire_body.rmdl" )
@@ -394,7 +394,7 @@ vector function FindAnyPerpendicularVector( vector v )
 
 bool function IsLobbyMapName( string levelname )
 {
-	if ( levelname == "mp_lobby" )
+	if ( levelname == "mp_lobby" || levelname == "mp_npe" )
 		return true
 
 	return false
@@ -1458,7 +1458,7 @@ UIPos function REPLACEHud_GetParentRelativePos( var panel )
 UISize function GetScreenSize()
 {
 	#if UI
-		return REPLACEHud_GetSize( GetMenu( "MainMenu" ) )
+		return REPLACEHud_GetSize( GetMenu( "R5RMainMenu" ) )
 	#elseif CLIENT
 		array screenSize = expect array( Hud.GetScreenSize() )
 
@@ -1896,6 +1896,11 @@ bool function IsSurvivalTraining()
 bool function IsFiringRangeGameMode()
 {
 	return GetCurrentPlaylistVarBool( "survival_firingrange", false )
+}
+
+bool function IsCharacterReselectEnabled()
+{
+	return GetCurrentPlaylistVarInt( "character_reselect_enabled", 0 ) > 0
 }
 
 bool function FiringRangeHasFriendlyFire()
@@ -2391,7 +2396,7 @@ entity function AssertLocalOrServerValidPlayer( entity player )
 
 bool function IsEverythingUnlocked()
 {
-	#if R5DEV
+	#if DEVELOPER
 		if ( GetCurrentPlaylistVarBool( "dev_force_everything_unlocked", false ) )
 			return true
 	#endif

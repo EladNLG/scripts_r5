@@ -79,9 +79,9 @@ global function ServerCallback_SetWeaponPreviewState
 global function GetRadiusDamageDataFromProjectile
 global function OnWeaponAttemptOffhandSwitch_Never
 
-#if R5DEV
+#if DEVELOPER
 global function DevPrintAllStatusEffectsOnEnt
-#endif // #if R5DEV
+#endif // #if DEVELOPER
 
 #if SERVER
 global function PassThroughDamage
@@ -129,7 +129,7 @@ global function TryApplyingBurnDamage
 global function AddEntityBurnDamageStack
 global function ApplyBurnDamageTick
 
-#if R5DEV
+#if DEVELOPER
 global function ToggleZeroingMode
 #endif
 
@@ -242,7 +242,7 @@ struct
 
 		table<string, array<void functionref( entity, string, bool )> > weaponModChangedCallbacks
 
-		#if R5DEV
+		#if DEVELOPER
 			bool inZeroingMode = false
 		#endif
 
@@ -302,8 +302,11 @@ void function WeaponUtility_Init()
 	PrecacheImpactEffectTable( CLUSTER_ROCKET_FX_TABLE )
 
 	#if SERVER
-		AddDamageCallbackSourceID( eDamageSourceId.mp_weapon_grenade_emp, EMP_DamagedPlayerOrNPC )
-		AddDamageCallbackSourceID( eDamageSourceId.damagedef_ticky_arc_blast, EMP_DamagedPlayerOrNPC )
+		if(!GetCurrentPlaylistVarBool( "r5reloaded_aimtrainer", false ))
+		{
+			AddDamageCallbackSourceID( eDamageSourceId.mp_weapon_grenade_emp, EMP_DamagedPlayerOrNPC )
+			AddDamageCallbackSourceID( eDamageSourceId.damagedef_ticky_arc_blast, EMP_DamagedPlayerOrNPC )
+		}
 		AddCallback_OnPlayerRespawned( PROTO_TrackedProjectile_OnPlayerRespawned )
 		AddCallback_OnPlayerKilled( PAS_CooldownReduction_OnKill )
 		AddCallback_OnPlayerGetsNewPilotLoadout( OnPlayerGetsNewPilotLoadout )
@@ -526,7 +529,7 @@ void function EnergyChargeWeapon_StopCharge( entity weapon, EnergyChargeWeaponDa
 		}
 	#elseif SERVER
 		entity owner = weapon.GetWeaponOwner()
-		if ( IsValid( owner ) )
+		if ( IsValid( owner ) && owner.IsPlayer())
 		{
 			EmitSoundOnEntityExceptToPlayer( weapon, owner, expect string( weapon.GetWeaponInfoFileKeyField( "sound_energy_charge_end_3p" ) ) )
 		}
@@ -1519,7 +1522,7 @@ void function SatchelThink( entity satchel, entity player )
 	int satchelHealth = 15
 	thread TrapExplodeOnDamage( satchel, satchelHealth )
 
-	#if R5DEV
+	#if DEVELOPER
 		// temp HACK for FX to use to figure out the size of the particle to play
 		if ( Flag( "ShowExplosionRadius" ) )
 			thread ShowExplosionRadiusOnExplode( satchel )
@@ -1610,7 +1613,7 @@ void function PROTO_ExplodeAfterDelay( entity satchel, float delay )
 }
 #endif // SERVER
 
-#if R5DEV
+#if DEVELOPER
 void function ShowExplosionRadiusOnExplode( entity ent )
 {
 	ent.WaitSignal( "OnDestroy" )
@@ -1623,7 +1626,7 @@ void function ShowExplosionRadiusOnExplode( entity ent )
 	thread DebugDrawCircle( org, angles, innerRadius, 255, 255, 51, true, 3.0 )
 	thread DebugDrawCircle( org, angles, outerRadius, 255, 255, 255, true, 3.0 )
 }
-#endif // DEV
+#endif // DEVELOPER
 
 #if SERVER
 // shared between nades, satchels and laser mines
@@ -2598,7 +2601,7 @@ void function PROTO_InitTrackedProjectile( entity projectile )
 	int maxDeployed = projectile.GetProjectileWeaponSettingInt( eWeaponVar.projectile_max_deployed )
 	if ( maxDeployed != 0 )
 	{
-		AddToTrackedEnts( owner, projectile )
+		AddToScriptManagedEntArray( owner.s.activeTrapArrayId, projectile )
 
 		array<entity> traps = GetScriptManagedEntArray( owner.s.activeTrapArrayId )
 		array<entity> sameTypeTrapEnts
@@ -2831,7 +2834,7 @@ void function GiveEMPStunStatusEffects( entity ent, float duration, float fadeou
 	#endif
 }
 
-#if R5DEV
+#if DEVELOPER
 string ornull function FindEnumNameForValue( table searchTable, int searchVal )
 {
 	foreach ( string keyname, int value in searchTable )
@@ -2861,7 +2864,7 @@ void function DevPrintAllStatusEffectsOnEnt( entity ent )
 	}
 	printt( found + " effects active.\n" )
 }
-#endif // #if R5DEV
+#endif // #if DEVELOPER
 
 entity function GetMeleeWeapon( entity player )
 {
@@ -4516,9 +4519,11 @@ bool function EntityCanBurnOverTime( entity ent )
 	if ( !IsAlive( ent ) )
 		return false
 
-	if ( ent.IsPlayer() && !ent.IsPlayerDecoy() )
+	if ( IsDoor(ent) )
 		return true
 
+	if ( ent.IsPlayer() && !ent.IsPlayerDecoy() )
+		return true
 	else if ( ent.IsNPC() )
 		return true
 
@@ -4556,7 +4561,7 @@ bool function EntityCanAcceptNewBurnDamageStack( entity ent, BurnDamageSettings 
 
 void function AddEntityBurnDamageStack( entity ent, entity owner, entity inflictor, BurnDamageSettings burnSettings )
 {
-	Assert( ent.IsPlayer() || ent.IsNPC(), "Burn damage currently only supports players and NPCs." )
+	Assert( IsDoor(ent) || ent.IsPlayer() || ent.IsNPC() , "Burn damage currently only supports players, NPCs and doors." )
 
 	BurnDamageStack stack
 	stack.owner = owner
@@ -4568,12 +4573,14 @@ void function AddEntityBurnDamageStack( entity ent, entity owner, entity inflict
 	stack.damagePerTick = burnSettings.burnDamage / numIntervals
 	stack.burnSettings = burnSettings
 
-	if ( ent.IsPlayer() )
+	if ( IsDoor(ent) )
+		ent.e.burnDamageStacks.append( stack )
+	else if ( ent.IsPlayer() )
 		ent.p.burnDamageStacks.append( stack )
 	else if ( ent.IsNPC() )
 		ent.ai.burnDamageStacks.append( stack )
 
-	#if R5DEV && DEBUG_BURN_DAMAGE
+	#if DEVELOPER && DEBUG_BURN_DAMAGE
 		printt( "tickInterval:", stack.tickInterval )
 		printt( "numIntervals:", numIntervals )
 		printt( "damagePerTick:", stack.damagePerTick )
@@ -4586,12 +4593,14 @@ void function AddEntityBurnDamageStack( entity ent, entity owner, entity inflict
 
 void function RemoveEntityBurnDamageStack( entity ent, int stackIdx )
 {
-	if ( ent.IsPlayer() )
+	if ( IsDoor(ent) )
+		ent.e.burnDamageStacks.remove( stackIdx )
+	else if ( ent.IsPlayer() )
 		ent.p.burnDamageStacks.remove( stackIdx )
-	else
+	else if ( ent.IsNPC() )
 		ent.ai.burnDamageStacks.remove( stackIdx )
 
-	#if R5DEV && DEBUG_BURN_DAMAGE
+	#if DEVELOPER && DEBUG_BURN_DAMAGE
 		printt( "burn stack removed, num stacks is now:", GetEntityBurnDamageStackCount( ent ) )
 	#endif
 }
@@ -4605,7 +4614,7 @@ void function EntityBurnDamageThread( entity ent )
 	OnThreadEnd(
 		function () : ( ent )
 		{
-			#if R5DEV && DEBUG_BURN_DAMAGE
+			#if DEVELOPER && DEBUG_BURN_DAMAGE
 				printt( "EntityBurnDamageThread ended" )
 			#endif
 
@@ -4634,7 +4643,7 @@ void function EntityBurnDamageThread( entity ent )
 					dmgThisTick += remainderDmg
 					stack.damageDealt += remainderDmg
 
-					#if R5DEV && DEBUG_BURN_DAMAGE
+					#if DEVELOPER && DEBUG_BURN_DAMAGE
 						printt( "applying", remainderDmg, "burn damage remainder, total damage dealt:", stack.damageDealt )
 					#endif
 				}
@@ -4645,7 +4654,7 @@ void function EntityBurnDamageThread( entity ent )
 				stack.damageDealt += stack.damagePerTick
 				stack.lastDamageTime = Time()
 
-				#if R5DEV && DEBUG_BURN_DAMAGE
+				#if DEVELOPER && DEBUG_BURN_DAMAGE
 					printt( "applying", stack.damagePerTick, "burn damage, total damage dealt:", stack.damageDealt )
 				#endif
 			}
@@ -4685,7 +4694,9 @@ bool function EntityHasMaxBurnDamageStacks( entity ent, BurnDamageSettings burnS
 
 array<BurnDamageStack> function GetEntityBurnDamageStacks( entity ent )
 {
-	if ( ent.IsPlayer() )
+	if ( IsDoor(ent) )
+		return ent.e.burnDamageStacks
+	else if ( ent.IsPlayer() )
 		return ent.p.burnDamageStacks
 
 	return ent.ai.burnDamageStacks
@@ -4693,7 +4704,12 @@ array<BurnDamageStack> function GetEntityBurnDamageStacks( entity ent )
 
 int function GetEntityBurnDamageStackCount( entity ent )
 {
-	if ( ent.IsPlayer() )
+	if ( !IsAlive(ent) )
+		return 0
+
+	if ( IsDoor(ent) )
+		return ent.e.burnDamageStacks.len()
+	else if ( ent.IsPlayer() )
 		return ent.p.burnDamageStacks.len()
 
 	return ent.ai.burnDamageStacks.len()
@@ -4701,7 +4717,9 @@ int function GetEntityBurnDamageStackCount( entity ent )
 
 bool function EntityIsBurning( entity ent )
 {
-	if ( ent.IsPlayer() )
+	if ( IsDoor(ent) )
+		return ent.e.isBurning
+	else if ( ent.IsPlayer() )
 		return ent.p.isBurning
 
 	return ent.ai.isBurning
@@ -4709,14 +4727,16 @@ bool function EntityIsBurning( entity ent )
 
 void function SetEntityIsBurning( entity ent, bool isBurning )
 {
-	if ( ent.IsPlayer() )
+	if ( IsDoor(ent) )
+		ent.e.isBurning = isBurning
+	else if ( ent.IsPlayer() )
 		ent.p.isBurning = isBurning
 	else
 		ent.ai.isBurning = isBurning
 }
 
 
-#if R5DEV
+#if DEVELOPER
 void function ToggleZeroingMode()
 {
 	if ( !GetPlayerArray().len() )
@@ -4745,7 +4765,7 @@ void function ToggleZeroingMode()
 		printt( "ENTERED ZEROING MODE" )
 	}
 }
-#endif //DEV
+#endif // DEVELOPER
 
 
 #endif // SERVER
@@ -4829,7 +4849,7 @@ bool function OnWeaponAttemptOffhandSwitch_Never( entity weapon )
 #if CLIENT
 void function ServerCallback_SetWeaponPreviewState( bool newState )
 {
-	#if R5DEV
+	#if DEVELOPER
 		entity player = GetLocalClientPlayer()
 
 		if ( newState )

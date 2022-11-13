@@ -82,7 +82,7 @@ void function VaultPanelSpawned( entity panel )
 	newPanel.panel = panel
 
 	#if SERVER
-	
+
 	#endif // SERVER
 
 	file.vaultControlPanels.append( newPanel )
@@ -102,7 +102,7 @@ void function VaultDoorSpawned( entity door )
 	door.UnsetUsable()
 
 	#endif // SERVER
-	
+
 	SetObjectCanBeMeleed( door, false )
 	door.SetTakeDamageType( DAMAGE_NO )
 
@@ -116,7 +116,7 @@ const float PANEL_TO_DOOR_RADIUS = 150.0
 void function EntitiesDidLoad()
 {
 	foreach( panelData in file.vaultControlPanels )
-	{		
+	{
 		vector panelPos = panelData.panel.GetOrigin()
 
 		foreach ( door in file.vaultDoors )
@@ -141,7 +141,7 @@ void function SetVaultPanelState( entity panel, int panelState )
 	if ( panelState == panelData.panelState )
 		return
 
-	printf( "LootVaultPanelDebug: Changing panel state from %i to %i.", panelData.panelState, panelState )
+	//printf( "LootVaultPanelDebug: Changing panel state from %i to %i.", panelData.panelState, panelState )
 
 	panelData.panelState = panelState
 
@@ -151,12 +151,12 @@ void function SetVaultPanelState( entity panel, int panelState )
 			return
 		case ePanelState.UNLOCKING:
 		{
-			printf( "LootVaultPanelDebug: Changing panel state to UNLOCKING" )
+			//printf( "LootVaultPanelDebug: Changing panel state to UNLOCKING" )
 			LootVaultPanelState_Unlocking( panelData, panelState )
 		}
 		case ePanelState.UNLOCKED:
 		{
-			printf( "LootVaultPanelDebug: Changing panel state to UNLOCKED" )
+			//printf( "LootVaultPanelDebug: Changing panel state to UNLOCKED" )
 			LootVaultPanelState_Unlocked( panelData, panelState )
 		}
 		default:
@@ -212,12 +212,12 @@ bool function LootVaultPanel_CanUseFunction( entity playerUser, entity panel )
 
 const float VAULT_PANEL_USE_TIME = 3.0
 void function OnVaultPanelUse( entity panel, entity playerUser, int useInputFlags )
-{	
+{
 	if ( !(useInputFlags & USE_INPUT_LONG) )
 		return
 
 	// TODO: Fix vault key
-	
+
 //	if ( !playerUser.GetPlayerNetBool( "hasDataKnife" ) )
 	if ( !VaultPanel_HasPlayerDataKnife(playerUser) )
 			return
@@ -252,13 +252,13 @@ void function VaultPanelUseSuccess( entity panel, entity player, ExtendedUseSett
 {
 	if ( !VaultPanel_HasPlayerDataKnife(player) )
 	{
-		printf( "LootVaultPanelDebug: Player likely dropped the vault key while opening" )
+		//printf( "LootVaultPanelDebug: Player likely dropped the vault key while opening" )
 		return
 	}
-	
+
 	LootVaultPanelData panelData = GetVaultPanelDataFromEntity( panel )
 
-	printf( "LootVaultPanelDebug: Panel Use Success" )
+	//printf( "LootVaultPanelDebug: Panel Use Success" )
 
 	#if SERVER
 
@@ -268,12 +268,12 @@ void function VaultPanelUseSuccess( entity panel, entity player, ExtendedUseSett
 	{
 		door.Dissolve( ENTITY_DISSOLVE_CORE, <0,0,0>, 1000 )
 	}
-	
+
 	panel.SetSkin(0)
 	panel.Dissolve( ENTITY_DISSOLVE_CORE, <0,0,0>, 1000 )
 
 	PlayBattleChatterLineToSpeakerAndTeam( player, "bc_vaultOpened" )
-	
+
 	SURVIVAL_RemoveFromPlayerInventory( player, "data_knife", 1 )
 
 	#endif
@@ -287,7 +287,7 @@ void function VaultPanelUnlocking( LootVaultPanelData panelData, int panelState 
 	if ( panelState != ePanelState.UNLOCKING )
 		return
 
-	printf( "LootVaultPanelDebug: Panel State: Unlocking" )
+	//printf( "LootVaultPanelDebug: Panel State: Unlocking" )
 
 	SetVaultPanelUnusable( panelData.panel )
 
@@ -305,7 +305,7 @@ void function VaultPanelUnlocked( LootVaultPanelData panelData, int panelState )
 		return
 	}
 
-	printf( "LootVaultPanelDebug: Panel State: Unlocked" )
+	//printf( "LootVaultPanelDebug: Panel State: Unlocked" )
 
 	#if SERVER
 
@@ -441,14 +441,14 @@ bool function IsValidLootVaultDoorEnt( entity ent )
 void function SetVaultPanelUsable( entity panel )
 {
 	#if SERVER
-	
+
 	panel.SetSkin(1) // red
-	
+
 	panel.SetUsable()
 	panel.SetUsableByGroup( "pilot" )
 	panel.AddUsableValue( VAULTPANEL_MAX_VIEW_ANGLE_TO_AXIS )
 	panel.SetUsableValue( USABLE_BY_ALL | USABLE_CUSTOM_HINTS )
-	
+
 	#endif // SERVER
 
 	SetCallback_CanUseEntityCallback( panel, LootVaultPanel_CanUseFunction )
@@ -522,7 +522,7 @@ bool function HACK_IsVaultDoor( entity ent )
 
 	if ( !IsDoor( ent ) )
 		return false
-	
+
 	if ( ent.GetSkin() == 1 )
 		return true
 

@@ -1,6 +1,7 @@
 // Credits
 // sal#3261 -- main
 // @Shrugtal -- score ui
+// @KralRindo, BobTheBob#1150 -- GunGame Mode
 // everyone else -- advice
 
 
@@ -18,7 +19,8 @@ global function Deathmatch_GetVotingTime
 
 global function Deathmatch_GetIntroCutsceneNumSpawns           
 global function Deathmatch_GetIntroCutsceneSpawnDuration        
-global function Deathmatch_GetIntroSpawnSpeed        
+global function Deathmatch_GetIntroSpawnSpeed      
+global function IsGunGameMode  
 
 
 #if SERVER
@@ -27,6 +29,8 @@ global function Equipment_GetRespawnKit_PrimaryWeapon
 global function Equipment_GetRespawnKit_SecondaryWeapon
 global function Equipment_GetRespawnKit_Tactical
 global function Equipment_GetRespawnKit_Ultimate
+global function TDM_GunGameInit
+global function GetGunGameWeapons
 #endif
 
 
@@ -41,12 +45,20 @@ global enum eTDMAnnounce
 	VOTING_PHASE = 3
 	MAP_FLYOVER = 4
 	IN_PROGRESS = 5
+	VOTING_PHASE_GG = 6
 }
 
 global struct LocPair
 {
     vector origin = <0, 0, 0>
     vector angles = <0, 0, 0>
+}
+
+global struct GunGameWeapon
+{
+	string weapon
+	array<string> mods
+	int offhandSlot = -1
 }
 
 global struct LocationSettings 
@@ -61,18 +73,15 @@ struct {
     array choices
     array<LocationSettings> locationSettings
     var scoreRui
-
+	array<GunGameWeapon> weapons
 } file;
-
-
-
 
 void function Sh_CustomTDM_Init() 
 {
 
 
     // Map locations
-
+	TDM_GunGameInit()
     switch(GetMapName())
     {
     case "mp_rr_canyonlands_staging":
@@ -86,6 +95,67 @@ void function Sh_CustomTDM_Init()
 					NewLocPair(<34986, -3442, -28263>, <0, -113, 0>)
                 ],
                 <0, 0, 3000>
+            )
+        )
+        break
+		
+    case "mp_rr_arena_skygarden":
+        Shared_RegisterLocation(
+            NewLocationSettings(
+                "Encore",
+                [
+                    NewLocPair(<0, -3560, 2883>, <0, 90, 0>),
+					NewLocPair(<0, 3190, 3010>, <0, -90, 0>)
+                ],
+                <0, 0, 3000>
+            )
+        )
+        break
+		
+    case "mp_rr_ashs_redemption":
+        Shared_RegisterLocation(
+            NewLocationSettings(
+                "Ash's Redemption",
+                [
+                    NewLocPair(<-22104, 6009, -26929>, <0, 0, 0>),
+					NewLocPair(<-21372, 3709, -26955>, <-5, 55, 0>),
+                    NewLocPair(<-19356, 6397, -26861>, <-4, -166, 0>),
+					NewLocPair(<-20713, 7409, -26742>, <-4, -114, 0>)
+                ],
+                <0, 0, 1000>
+            )
+        )
+        break
+		
+    case "mp_rr_arena_composite":
+        Shared_RegisterLocation(
+            NewLocationSettings(
+                "Drop-Off",
+                [
+					NewLocPair(<-3592, 1081, 258>, <0, 37, 0>),
+					NewLocPair(<3592, 1081, 258>, <0, 142, 0>),
+					NewLocPair(<-1315, 4113, 71>, <0, -43, 0>),
+					NewLocPair(<1315, 4113, 71>, <0, -136, 0>),
+					NewLocPair(<-1374, 1, 259>, <0, 35, 0>),
+					NewLocPair(<1374, 1, 259>, <0, 140, 0>)
+                ],
+                <0, 0, 1000>
+            )
+        )
+        break
+		
+	case "mp_rr_aqueduct":
+	case "mp_rr_aqueduct_night":
+        Shared_RegisterLocation(
+            NewLocationSettings(
+                "Overflow Work Area",
+                [
+					NewLocPair(<-3442, -4093, 347>, <0, -20, 0>),
+					NewLocPair(<2153, -6570, 456>, <0, 180, 0>),
+					NewLocPair(<4860, -4097, 347>, <0, -158, 0>),
+					NewLocPair(<-819, -6570, 456>, <0, 0, 0>)
+                ],
+                <0, 0, 1000>
             )
         )
         break
@@ -268,6 +338,21 @@ void function Sh_CustomTDM_Init()
 
         break
 
+		case "mp_rr_desertlands_64k_x_64k_tt":
+        Shared_RegisterLocation(
+            NewLocationSettings(
+                "Mirage Voyage",
+                [
+                    NewLocPair(<-25930, -3790, -2442>, <0, -37, 0>),
+					NewLocPair(<-22928, -5785, -2396>, <0, 147, 0>),
+                    NewLocPair(<-27364, -4969, -2681>, <0, -32, 0>),
+					NewLocPair(<-23150, -6776, -2879>, <0, 122, 0>)
+                ],
+                <0, 0, 3000>
+            )
+        )
+        break
+
         case "mp_rr_desertlands_64k_x_64k":
         case "mp_rr_desertlands_64k_x_64k_nx":
 	        Shared_RegisterLocation(
@@ -416,6 +501,141 @@ void function Sh_CustomTDM_Init()
     
 }
 
+void function TDM_GunGameInit()
+{
+    if( !IsGunGameMode() )
+        return
+
+
+    //
+    // these should probably be moved to a datatable at some point
+    //
+    
+	//	SUB MACHINE GUNS
+	
+	//	Alternator SMG
+	GunGameWeapon Alternator = { weapon = "mp_weapon_alternator_smg", mods = [ "optic_cq_hcog_classic", "bullets_mag_l3", "barrel_stabilizer_l4_flash_hider", "stock_tactical_l3" ], ... }
+	file.weapons.append( Alternator )
+	
+	//	Volt SMG
+	GunGameWeapon Volt = { weapon = "mp_weapon_volt_smg", mods = [ "optic_cq_hcog_classic", "energy_mag_l3", "barrel_stabilizer_l4_flash_hider", "stock_tactical_l3" ],... }
+	file.weapons.append( Volt )
+		
+	//	R99
+	GunGameWeapon R99 = { weapon = "mp_weapon_r97", mods = [ "optic_cq_hcog_classic", "bullets_mag_l3", "barrel_stabilizer_l4_flash_hider", "stock_tactical_l3" ],... }
+	file.weapons.append( R99 )
+	
+	//	Prowler Burst  PDW
+	GunGameWeapon prwler = { weapon = "mp_weapon_pdw", mods = [ "optic_cq_hcog_classic", "highcal_mag_l3", "hopup_selectfire", "stock_tactical_l3" ],... }
+	file.weapons.append( prwler )
+	
+	
+	
+	
+	//	ASSAULT RIFLES
+	
+	//	Hemlok
+	GunGameWeapon Hemlok = { weapon = "mp_weapon_hemlok",mods = [ "optic_cq_hcog_bruiser", "highcal_mag_l3", "barrel_stabilizer_l4_flash_hider", "stock_tactical_l3" ], ... }
+	file.weapons.append( Hemlok )
+	
+	//	Flatline
+	GunGameWeapon Flatline = { weapon = "mp_weapon_vinson", mods = [ "optic_cq_hcog_bruiser", "highcal_mag_l3", "hopup_highcal_rounds", "stock_tactical_l3" ], ... }
+	file.weapons.append( Flatline )
+	
+	//	R301
+	GunGameWeapon R101 = { weapon = "mp_weapon_rspn101", mods = [ "optic_cq_hcog_bruiser", "bullets_mag_l3", "hopup_highcal_rounds", "stock_tactical_l3", "barrel_stabilizer_l4_flash_hider" ], ... }
+	file.weapons.append( R101 )
+	
+	//	Havoc
+	GunGameWeapon Havoc = { weapon = "mp_weapon_energy_ar", mods = [ "optic_cq_hcog_bruiser", "energy_mag_l3", "hopup_turbocharger", "stock_tactical_l3" ], ... }
+	file.weapons.append( Havoc )
+	
+	
+	
+	
+	//	LIGHT MACHINE GUNS
+	
+	//	Devotion
+	GunGameWeapon Devotion = { weapon = "mp_weapon_esaw", mods = [ "optic_cq_hcog_bruiser", "energy_mag_l3", "hopup_turbocharger", "stock_tactical_l3", "barrel_stabilizer_l4_flash_hider" ], ... }
+	file.weapons.append( Devotion )
+	
+	//	Spitfire
+	GunGameWeapon Spitfire = { weapon = "mp_weapon_lmg", mods = [ "optic_cq_hcog_bruiser", "highcal_mag_l3", "stock_tactical_l3", "barrel_stabilizer_l4_flash_hider" ], ... }
+	file.weapons.append( Spitfire )
+	
+	
+	
+	
+	//	SHOTGUNS
+	
+	//	Eva-8 Auto
+	GunGameWeapon Eva = { weapon = "mp_weapon_shotgun", mods = [ "optic_cq_hcog_classic", "shotgun_bolt_l3", "hopup_double_tap" ], ... }
+	file.weapons.append( Eva )
+	
+	//	Mozambique
+	GunGameWeapon Mozam = { weapon = "mp_weapon_shotgun_pistol", mods = [ "optic_cq_threat", "shotgun_bolt_l3", "hopup_unshielded_dmg" ], ... }
+	file.weapons.append( Mozam )
+	
+	//	Peacekeeper
+	GunGameWeapon Pk = { weapon = "mp_weapon_energy_shotgun", mods = [ "optic_cq_hcog_classic", "shotgun_bolt_l3", "hopup_energy_choke" ], ... }
+	file.weapons.append( Pk )
+	
+	
+	
+	
+	//	SNIPER RIFLES
+	
+	//	Triple Take
+	GunGameWeapon Taketake = { weapon = "mp_weapon_doubletake", mods = [ "optic_ranged_hcog", "stock_sniper_l3", "hopup_energy_choke", "energy_mag_l3" ], ... }
+	file.weapons.append( Taketake )
+	
+	//	Longbow
+	GunGameWeapon lbow = { weapon = "mp_weapon_dmr", mods = [ "optic_ranged_aog_variable", "highcal_mag_l3", "barrel_stabilizer_l4_flash_hider", "stock_sniper_l3" ], ... }
+	file.weapons.append( lbow )
+	
+	//	Charge Rifle
+	GunGameWeapon ChargeRifle = { weapon = "mp_weapon_defender", mods = [ "optic_sniper_threat", "stock_sniper_l3" ], ... }
+	file.weapons.append( ChargeRifle )
+	
+	
+	
+	
+	//	PISTOLS
+	
+	//	RE-45 AUTO
+	GunGameWeapon Re45 = { weapon = "mp_weapon_autopistol", mods = [ "optic_cq_holosight_variable", "bullets_mag_l3", "barrel_stabilizer_l4_flash_hider" ], ... }
+	file.weapons.append( Re45 )
+	
+	//	P2020
+	GunGameWeapon P2020 = { weapon = "mp_weapon_semipistol", mods = [ "optic_cq_threat", "bullets_mag_l3", "hopup_unshielded_dmg" ], ... }
+	file.weapons.append( P2020 )
+	
+	//	Wingman
+	GunGameWeapon Wingman = { weapon = "mp_weapon_wingman", mods = [ "optic_cq_hcog_classic", "highcal_mag_l3" ], ... }
+	file.weapons.append( Wingman )
+	
+	
+	//	CARE PACKAGE WEAPONS
+	if ( GetCurrentPlaylistVarBool( "GG_Drop_Guns", false ) ){
+	
+	//	Kraber
+	GunGameWeapon Kraber = { weapon = "mp_weapon_sniper", ... }
+	file.weapons.append( Kraber )
+	
+	//	L-Star
+	GunGameWeapon LSTAR = { weapon = "mp_weapon_lstar", mods = [ "optic_cq_threat" ], ... }
+	file.weapons.append( LSTAR )
+	
+	//	Mastiff
+	GunGameWeapon Mastiff = { weapon = "mp_weapon_mastiff", mods = [ "optic_cq_threat" ], ... }
+	file.weapons.append( Mastiff )}
+}
+
+array<GunGameWeapon> function GetGunGameWeapons()
+{
+	return file.weapons
+}
+
 LocPair function NewLocPair(vector origin, vector angles)
 {
     LocPair locPair
@@ -516,3 +736,9 @@ StoredWeapon function Equipment_GetRespawnKit_Weapon(string input, int type, int
     return weapon
 }
 #endif
+
+// purpose: return true if using GunGame logic
+bool function IsGunGameMode()
+{
+    return GetCurrentPlaylistVarBool( "tdm_gungame", false )
+}

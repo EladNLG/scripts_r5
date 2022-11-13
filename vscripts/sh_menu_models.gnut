@@ -190,11 +190,11 @@ struct
 
 		array<entity> dimmedEnts
 
-		#if R5DEV
+		#if DEVELOPER
 			bool   DEV_previewSelfAsParty = false
 			string DEV_characterOffsetCharacter = ""
 			vector DEV_characterOffset = <0, 0, 0>
-		#endif // DEV
+		#endif // DEVELOPER
 		int transitionTest = 3
 	#endif // CLIENT
 
@@ -242,7 +242,7 @@ global function GetAttachmentOriginOffset
 
 global function ShMenuModels_ClientToUI_OnMouseWheel
 
-#if R5DEV
+#if DEVELOPER
 global function DEV_TweakPlayCamera
 global function DEV_TweakCharacterCamera
 global function DEV_TweakWeaponCamera
@@ -250,7 +250,7 @@ global function DEV_TogglePreviewParty
 global function DEV_TransitionTest
 global function DEV_ScaleModel
 global function DEV_TweakCharacterOffset
-#endif // DEV
+#endif // DEVELOPER
 
 global function UIToClient_PROTO_UpdateClientWithLocalClientUID
 
@@ -563,8 +563,8 @@ void function InitPresentationData()
 		pd.fov = 15.5
 		pd.dofNearStart = DEFAULT_DOF_NEAR_START
 		pd.dofNearEnd = DEFAULT_DOF_NEAR_END
-		pd.dofFarStart = DEFAULT_DOF_FAR_START
-		pd.dofFarEnd = DEFAULT_DOF_FAR_END
+		pd.dofFarStart = 500.0
+		pd.dofFarEnd = 2000.0
 		pd.csmTexelScale1 = 0.22
 		pd.csmTexelScale2 = 0.55
 		pd.csmStartDistance = 70.0
@@ -1026,7 +1026,7 @@ void function EnableLobbyMenuCameraZoom()
 
 void function InitMenuEntities()
 {
-	#if R5DEV
+	#if DEVELOPER
 		if ( BuildingCubeMaps() )
 			return
 	#endif
@@ -1171,7 +1171,7 @@ void function UpdateMenuCharacterModelInternal( int overrideCharacterFlavorNetwo
 		entity refEnt = ModelData_GetPoseEntity( expect MenuModelData( file.presentationData[ file.currentPresentationType ].modelData ) )
 		vector base   = refEnt.GetOrigin()
 		vector offset = CharacterClass_GetGalleryModelOffset( character )
-		#if R5DEV
+		#if DEVELOPER
 			if ( ItemFlavor_GetHumanReadableRef( character ) == file.DEV_characterOffsetCharacter )
 				offset = file.DEV_characterOffset
 		#endif //
@@ -1322,7 +1322,7 @@ void function TrackPartyMembersAndDisplayModelsThread()
 		//Assert( party.amIInThis )
 		string localClientUid = PROTO_GetLocalClientUIDFromUIVM()
 
-		#if R5DEV
+		#if DEVELOPER
 			if ( file.DEV_previewSelfAsParty )
 			{
 				party.members.clear()
@@ -1335,7 +1335,7 @@ void function TrackPartyMembersAndDisplayModelsThread()
 					party.members.append( fakeMember )
 				}
 			}
-		#endif // DEV
+		#endif // DEVELOPER
 
 		foreach( PartyMember partyMemberInfo in party.members )
 		{
@@ -1393,7 +1393,7 @@ void function TrackPartyMembersAndDisplayModelsThread()
 				shouldCreateModel = true
 
 				ItemFlavor ornull characterOrNull = null
-				#if R5DEV
+				#if DEVELOPER
 					if ( file.DEV_previewSelfAsParty )
 						characterOrNull = LoadoutSlot_GetItemFlavor( LocalClientEHI(), Loadout_CharacterClass() )
 				#endif
@@ -2207,25 +2207,25 @@ void function SetMenuCamera( entity player, int presentationType, bool interpola
 	//EASING_BACK_INOUT
 
 	// TEMP: Disabled DOF until background is more final. It was causing visual artifacts with gladiator cards.
-	//float dofNearStart 	= file.presentationData[ presentationType ].dofNearStart
-	//float dofNearEnd 	= file.presentationData[ presentationType ].dofNearEnd
-	//float dofFarStart 	= file.presentationData[ presentationType ].dofFarStart
-	//float dofFarEnd 	= file.presentationData[ presentationType ].dofFarEnd
+	float dofNearStart 	= file.presentationData[ presentationType ].dofNearStart
+	float dofNearEnd 	= file.presentationData[ presentationType ].dofNearEnd
+	float dofFarStart 	= file.presentationData[ presentationType ].dofFarStart
+	float dofFarEnd 	= file.presentationData[ presentationType ].dofFarEnd
 
 	if ( interpolate )
 	{
 		printt( "Interpolating menu camera to:", GetEnumString( "ePresentationType", presentationType ) )
-		//DoF_LerpNearDepth( dofNearStart, dofNearEnd, TRANSITION_DURATION )
-		//DoF_LerpFarDepth( dofFarStart, dofFarEnd, TRANSITION_DURATION )
+		DoF_LerpNearDepth( dofNearStart, dofNearEnd, TRANSITION_DURATION )
+		DoF_LerpFarDepth( dofFarStart, dofFarEnd, TRANSITION_DURATION )
 	}
 	else
 	{
 		printt( "Snapping menu camera to:", GetEnumString( "ePresentationType", presentationType ) )
-		//DoF_SetNearDepth( dofNearStart, dofNearEnd )
-		//DoF_SetFarDepth( dofFarStart, dofFarEnd )
+		DoF_SetNearDepth( dofNearStart, dofNearEnd )
+		DoF_SetFarDepth( dofFarStart, dofFarEnd )
 	}
 
-	//DoFSetDilateInfocus( true ) // We want to reduce DoF aliasing around bright edges in the menus.
+	DoFSetDilateInfocus( true ) // We want to reduce DoF aliasing around bright edges in the menus.
 
 	#if CONSOLE_PROG
 		const float texelNorm = 2.0
@@ -2385,7 +2385,7 @@ void function TransitionTest( entity model, vector color, bool doTransitionFX, b
 	}
 }
 
-#if R5DEV
+#if DEVELOPER
 void function DEV_TweakPlayCamera( vector origin, vector angles, float fov )
 {
 	file.playCameraTarget.SetOrigin( origin )
@@ -2440,7 +2440,7 @@ void function DEV_TweakCharacterOffset( string character, vector offset )
 	file.DEV_characterOffsetCharacter = character
 	file.DEV_characterOffset = offset
 }
-#endif // DEV
+#endif // DEVELOPER
 #endif // CLIENT
 
 #if UI
@@ -2871,7 +2871,7 @@ void function SpawnShadowEyeEffects()
 }
 
 
-#if R5DEV
+#if DEVELOPER
 void function DrawLightDebug( vector origin, vector angles, vector color, float dist )
 {
 	vector endOrigin = origin + AnglesToForward( angles ) * dist

@@ -371,7 +371,7 @@ function __PlayAnim( guy, animation_name, reference = null, optionalTag = null, 
 
 	guy.SetNextThinkNow()
 
-	#if !R5DEV
+	#if !DEVELOPER
 	if ( guy.IsNPC() && !guy.IsInterruptable() )
 	{
 		// better than nothing failsafe
@@ -1182,7 +1182,7 @@ void function FirstPersonSequence( FirstPersonSequenceStruct sequence, entity pl
 			}
 		}
 
-		if ( !doFirstPersonAnim || !sequence.playerPushable )
+		if ( !doFirstPersonAnim && !sequence.playerPushable )
 		{
 			player.SnapFeetToEyes()
 		}

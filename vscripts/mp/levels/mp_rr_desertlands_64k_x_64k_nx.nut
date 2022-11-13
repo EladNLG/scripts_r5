@@ -2,14 +2,14 @@
 global function CodeCallback_MapInit
 #endif //SERVER
 
-#if CLIENT
-global function CodeCallback_MapInit
-#endif //CLIENT
-
 #if SERVER
 void function CodeCallback_MapInit()
 {
-	SharedInit()
+	if ( IsFallLTM() )
+	{
+		SharedInit()
+		SURVIVAL_AddCallback_OnDeathFieldStopShrink( OnDeathFieldStopShrink_ShadowSquad )
+	}
 	Desertlands_MapInit_Common()
 }
 #endif //SERVER
@@ -17,21 +17,21 @@ void function CodeCallback_MapInit()
 #if CLIENT
 void function ClientCodeCallback_MapInit()
 {
-	SharedInit()
-	SURVIVAL_AddCallback_OnDeathFieldStopShrink( OnDeathFieldStopShrink_ShadowSquad)
+	if ( IsFallLTM() )
+		SharedInit()
 }
 #endif //CLIENT
-
-#if SERVER
-void function OnDeathFieldStopShrink_ShadowSquad( DeathFieldData deathFieldData )
-{
-	//LootCreepGarbageCollect() // Assets only exists in "mp_rr_canyonlands_mu1_night.rpak"
-}
-#endif //SERVER
 
 void function SharedInit()
 {
 	ShPrecacheShadowSquadAssets()
 	ShPrecacheEvacShipAssets()
-	//ShLootCreeps_Init() // Assets only exists in "mp_rr_canyonlands_mu1_night.rpak"
+	ShLootCreeps_Init()
 }
+
+#if SERVER
+void function OnDeathFieldStopShrink_ShadowSquad( DeathFieldData deathFieldData )
+{
+	LootCreepGarbageCollect()
+}
+#endif //SERVER

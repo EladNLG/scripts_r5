@@ -11,9 +11,12 @@ void function ClientCommands_Init()
 	AddClientCommandCallback( "noclip", ClientCommand_noclip )
 	AddClientCommandCallback( "infinite_ammo", ClientCommand_infinite_ammo )
 	AddClientCommandCallback( "ToggleThirdPerson", ClientCommand_ToggleThirdPerson )
+	AddClientCommandCallback( "ToggleHUD", ClientCommand_ToggleHUD )
 
-	#if R5DEV
-	AddClientCommandCallback( "script", ClientCommand_script )
+	AddClientCommandCallback( "recharge", ClientCommand_recharge )
+
+	#if DEVELOPER
+	//AddClientCommandCallback( "script", ClientCommand_script )
 	#endif
 }
 
@@ -21,6 +24,9 @@ bool function ClientCommand_noclip( entity player, array<string> args )
 {
 	if ( GetConVarInt( "sv_cheats" ) != 1 )
 		return true
+
+	if ( IsValid( player.GetParent() ) )
+		return false
 
 	if ( player.IsNoclipping() )
 		player.SetPhysics( MOVETYPE_WALK )
@@ -32,9 +38,8 @@ bool function ClientCommand_noclip( entity player, array<string> args )
 
 bool function ClientCommand_ToggleThirdPerson( entity player, array<string> args )
 {
-	if ( !IsFiringRangeGameMode() )
+	if ( GetConVarInt( "sv_cheats" ) != 1 )
 		return false
-
 	if ( player.IsThirdPersonShoulderModeOn() )
 		player.SetThirdPersonShoulderModeOff() 	
 	else
@@ -43,13 +48,68 @@ bool function ClientCommand_ToggleThirdPerson( entity player, array<string> args
 	return true
 }
 
-bool function ClientCommand_infinite_ammo( entity player, array<string> args )
+bool function ClientCommand_ToggleHUD( entity player, array<string> args )
 {
-    //soon
-	return false
+	if( !IsValid( player ) )
+		return true
+
+	if ( !( "hudVisible" in player.s ) )
+		player.s.hudVisible <- true
+
+	player.s.hudVisible = !player.s.hudVisible
+
+	array<int> flagsForHudVisibilityControl = [
+		CE_FLAG_HIDE_MAIN_HUD_INSTANT,
+		CE_FLAG_HIDE_PERMANENT_HUD
+	]
+
+	if ( player.s.hudVisible )
+	{
+		foreach ( flag in flagsForHudVisibilityControl )
+			RemoveCinematicFlag( player, flag )
+	} else
+	{
+		foreach ( flag in flagsForHudVisibilityControl )
+			AddCinematicFlag( player, flag )
+	}
+
+	return true
 }
 
-#if R5DEV
+// Gives a gun infinite reloads
+bool function ClientCommand_infinite_ammo( entity player, array<string> args )
+{
+	if( !IsValid( player ) )
+		return false
+
+	if ( GetConVarInt( "sv_cheats" ) != 1 )
+		return false
+
+	foreach(entity weapon in GetEntArrayByClass_Expensive("weaponx")) {
+		if(weapon.HasMod( "survival_finite_ammo" )) {
+			weapon.RemoveMod( "survival_finite_ammo" )
+		}
+	}
+	return true
+}
+
+// Instantly fills a player's abilities
+bool function ClientCommand_recharge( entity player, array<string> args )
+{
+	if( !IsValid( player ) )
+		return false
+
+	if ( GetConVarInt( "sv_cheats" ) != 1 )
+		return false
+    
+	player.GetOffhandWeapon( OFFHAND_INVENTORY )
+		.SetWeaponPrimaryClipCount( player.GetOffhandWeapon( OFFHAND_INVENTORY ).GetWeaponPrimaryClipCountMax() )
+	player.GetOffhandWeapon( OFFHAND_LEFT )
+		.SetWeaponPrimaryClipCount( player.GetOffhandWeapon( OFFHAND_LEFT ).GetWeaponPrimaryClipCountMax() )
+	return true
+}
+
+#if DEVELOPER
 bool function ClientCommand_script( entity player, array<string> args )
 {
 	if( !IsValid( player ) )

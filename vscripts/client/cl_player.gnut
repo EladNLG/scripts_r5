@@ -49,7 +49,7 @@ global function ClientPlayerClassChanged
 global function GetHideCrosshairHitIndicatorOverride
 global function SetHideCrosshairHitIndicatorOverride
 
-#if R5DEV
+#if DEVELOPER
 global function BloodSprayDecals_Toggle
 #endif
 
@@ -70,6 +70,12 @@ struct BloodDecalParams
 	float secondaryTraceDist
 	asset fxType
 	asset secondaryFxType
+}
+
+enum eKillConfirmedSounds
+{
+    Classic,
+    Shadowfall
 }
 
 void function ClPlayer_Init()
@@ -260,7 +266,7 @@ function Pressed_RequestTitanfall( entity player )
 	if ( !IsTitanAvailable( player ) )
 		return
 
-	#if R5DEV
+	#if DEVELOPER
 		printt( player.GetEntIndex(), "Requested replacement Titan from eye pos " + player.EyePosition() + " view angles " + player.EyeAngles() + " player origin " + player.GetOrigin() + " map " + GetMapName() )
 	#endif
 
@@ -1022,7 +1028,7 @@ BloodDecalParams function BloodDecal_GetParams( float damageAmount, bool isHeadS
 	return params
 }
 
-#if R5DEV
+#if DEVELOPER
 string function BloodSprayDecals_Toggle()
 {
 	string returnStr = ""
@@ -1041,6 +1047,35 @@ string function BloodSprayDecals_Toggle()
 	return returnStr
 }
 #endif
+
+string function GetKillConfirmedSound( entity attacker, entity victim )
+{
+    string killSound
+
+    switch ( GetCurrentPlaylistVarInt( "kill_confirmed_sound", eKillConfirmedSounds.Classic ) )
+    {
+        case eKillConfirmedSounds.Classic:
+            killSound = "Pilot_Killed_Indicator"
+            break
+        case eKillConfirmedSounds.Shadowfall:
+            killSound = "UI_InGame_ShadowSquad_RevengeKill"
+            break
+        default:
+            killSound = "Pilot_Killed_Indicator"
+            break
+    }
+
+    if ( GetCurrentPlaylistVarBool( "revenge_enabled", false ) )
+    {
+        if ( GetHasEntityVar( attacker, "revengePlayer" ) )
+        {
+            if ( attacker.nv.revengePlayer == victim )
+                killSound = "UI_InGame_ShadowSquad_RevengeKill"
+        }
+    }
+
+    return killSound
+}
 
 void function ServerCallback_OnEntityKilled( entity attacker, entity victim, int scriptDamageType, int damageSourceId )
 {
@@ -1082,15 +1117,17 @@ void function ServerCallback_OnEntityKilled( entity attacker, entity victim, int
 	if ( victim.IsPlayer() && victim != attacker && damageSourceId != eDamageSourceId.human_execution )
 	{
 		if ( attacker == localClientPlayer )
-		{
-			thread PlayKillConfirmedSound( "Pilot_Killed_Indicator" )
+		{        
+			thread PlayKillConfirmedSound( GetKillConfirmedSound( attacker, victim ) )
 		}
+		/*
 		else if ( IsValid( attacker ) && attacker.IsTitan() )
 		{
 			entity bossPlayer = attacker.GetBossPlayer()
 			if ( bossPlayer && bossPlayer == localClientPlayer )
 				thread PlayKillConfirmedSound( "Pilot_Killed_Indicator" )
 		}
+		*/
 	}
 	else if ( (IsGrunt( victim ) || IsSpectre( victim )) && attacker == localClientPlayer )
 	{
@@ -1471,8 +1508,8 @@ void function PlayScreenFXWarpJump( entity clientPlayer )
 	)
 
 	wait 3.2
-	if ( IsValid( player.GetCockpit() ) )
-		thread TonemappingUpdateAfterWarpJump()
+	// if ( IsValid( player.GetCockpit() ) )
+		// thread TonemappingUpdateAfterWarpJump()
 }
 
 const EXPOSURE_RAMPDOWN_DURATION = 2.0

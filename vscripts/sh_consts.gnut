@@ -92,11 +92,13 @@ global const NPC_TITAN_PILOT_PROTOTYPE  = 0
 global const HAS_TASKLIST_SYSTEM        = false
 global const HAS_MISSIONINFO_SYSTEM     = false
 
-
+global const MENUFALL                   = "menufall"
 global const TEAM_DEATHMATCH            = "tdm"
 global const SURVIVAL                   = "survival"
 global const FREELANCE                  = "freelance"
 global const CUSTOM_TDM                 = "custom_tdm"
+global const CUSTOM_CTF                 = "custom_ctf"
+global const CUSTOM_AIMTRAINER			= "custom_aimtrainer"
 
 global const FREELANCE_ENABLED          = false
 
@@ -686,6 +688,24 @@ global const SKYSCALE_O2_MCOR_PLAYER					= 0.4
 global const SKYSCALE_O2_DOOROPEN_MCOR_ACTOR			= 1.0
 global const SKYSCALE_O2_DOOROPEN_MCOR_SHIP				= 1.1
 global const SKYSCALE_O2_DOOROPEN_MCOR_PLAYER			= 0.9
+
+//--------------------------------------------------
+// 				DLIGHT TYPES
+//--------------------------------------------------
+
+// Base types
+global const DLIGHT_WHITE  = < 1, 1, 1 >
+global const DLIGHT_RED    = < 1, 0, 0 >
+global const DLIGHT_GREEN  = < 0, 1, 0 >
+global const DLIGHT_BLUE   = < 0, 0, 1 >
+global const DLIGHT_YELLOW = < 1, 1, 0 >
+global const DLIGHT_PURPLE = < 1, 0, 1 >
+
+// Green types
+global const DLIGHT_SEAGREEN   = < 0, 1, 1 >
+global const DLIGHT_LIGHTGREEN = < 0.3, 1, 1 >
+
+global const DLIGHT_RICH_BROWN  = < 0.8, 0.3, 0.1 >
 
 
 //--------------------------------------------------

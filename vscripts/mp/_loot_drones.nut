@@ -79,7 +79,7 @@ void function InitLootDronePaths()
 		file.dronePaths.append( groupNodes )
 	}
 
-	printf( "DronePaths: found %i paths", file.dronePaths.len() )
+	//printf( "DronePaths: found %i paths", file.dronePaths.len() )
 
 	// Mark drone paths as initialized
 	FlagSet( "DronePathsInitialized" )
@@ -405,6 +405,8 @@ void function LootDrones_OnDamaged(entity ent, var damageInfo)
 
 	EmitSoundOnEntity( ent, LOOT_DRONE_DEATH_SOUND )
 	EmitSoundOnEntity( ent, LOOT_DRONE_CRASHING_SOUND )
+	
+	PlayBattleChatterLineToSpeakerAndTeam( attacker, "bc_cargoBotDamaged" )
 
 	entity effect = StartParticleEffectOnEntity_ReturnEntity
 	( 

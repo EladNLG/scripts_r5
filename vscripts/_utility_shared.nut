@@ -139,13 +139,15 @@ void function InitWeaponScripts()
 	MpWeaponThermiteGrenade_Init()
 	MeleeWraithKunai_Init()
 	MpWeaponWraithKunaiPrimary_Init()
+	MeleeBoloSword_Init()
+	MpWeaponPoloSwordPrimary_Init()
 	MeleeBloodhoundAxe_Init()
 	MpWeaponBloodhoundAxePrimary_Init()
 	MeleeLifelineBaton_Init()
 	MpWeaponLifelineBatonPrimary_Init()
 	MpWeaponDeployableCover_Init()
 
-	#if R5DEV
+	#if DEVELOPER
 		MeleeShadowsquadHands_Init()
 		MpWeaponShadowsquadHandsPrimary_Init()
 		MDLSpawner_Init()
@@ -172,7 +174,6 @@ void function InitWeaponScripts()
 	MpWeaponTrophy_Init()
 
 	MpWeaponBasicBolt_Init()
-	MpWeaponEditor_Init()
 
 	#if SERVER
 		//BallLightning_Init()
@@ -930,6 +931,9 @@ bool function ControlPanel_CanUseFunction( entity playerUser, entity controlPane
 {
 	if ( Bleedout_IsBleedingOut( playerUser ) )
 		return false
+		
+	if ( !IsValid( playerUser ) )
+		return false
 
 	entity activeWeapon = playerUser.GetActiveWeapon( eActiveInventorySlot.mainHand )
 	if ( IsValid( activeWeapon ) && activeWeapon.IsWeaponOffhand() )
@@ -1398,6 +1402,11 @@ bool function GamePlayingOrSuddenDeath()
 {
 	int gameState = GetGameState()
 	return gameState == eGameState.Playing || gameState == eGameState.SuddenDeath
+}
+
+int function Riff_MinimapState()
+{
+	return expect int( GetServerVar( "minimapState" ) )
 }
 
 vector function VectorReflectionAcrossNormal( vector vec, vector normal )
@@ -4436,7 +4445,7 @@ vector function OffsetPointRelativeToVector( vector point, vector offset, vector
 #if SERVER
 float function GetRoundTimeLimit_ForGameMode()
 {
-#if R5DEV
+#if DEVELOPER
 	if ( level.devForcedTimeLimit )
 	{
 		//Make it needed to be called multiple times for RoundBasedGameModes
@@ -4552,18 +4561,18 @@ bool function PlayerIsInADS( entity player )
 	return activeWeapon.IsWeaponAdsButtonPressed() || activeWeapon.IsWeaponInAds()
 }
 
-//bool function PlayerIsInMeleeBlockingADS( entity player )
-//{
-//	entity activeWeapon = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
-//
-//	if ( !IsValid( activeWeapon ) )
-//		return false
-//
-//	if ( activeWeapon.GetWeaponSettingBool( eWeaponVar.attack_button_presses_melee ) )
-//		return false
-//
-//	return activeWeapon.IsWeaponAdsButtonPressed() || activeWeapon.IsWeaponInAds()
-//}
+bool function PlayerIsInMeleeBlockingADS( entity player )
+{
+	entity activeWeapon = player.GetActiveWeapon( eActiveInventorySlot.mainHand )
+
+	if ( !IsValid( activeWeapon ) )
+		return false
+
+	if ( activeWeapon.GetWeaponSettingBool( eWeaponVar.attack_button_presses_melee ) )
+		return false
+
+	return activeWeapon.IsWeaponAdsButtonPressed() || activeWeapon.IsWeaponInAds()
+}
 
 
 //////
@@ -5006,8 +5015,8 @@ array<entity> function GetFriendlySquadArrayForPlayer_AliveConnected( entity pla
 	{
 		if ( !IsAlive( player ) )
 			return []
-		#if SERVER
-		
+#if SERVER
+
 		// if (teamsWithPlayersAlive.len() == 0)
 		// {
 		// 	teamsWithPlayersAlive.append( team )
@@ -5020,7 +5029,7 @@ array<entity> function GetFriendlySquadArrayForPlayer_AliveConnected( entity pla
 		// 		teamFound = true
 		// }
 
-	#endif
+#endif
 		return [player]
 	}
 

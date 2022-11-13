@@ -83,8 +83,6 @@ global struct ClientEntityStruct
 	void functionref( entity, entity, var ) Callback_VortexTriggerBulletHit
 	void functionref( entity, entity, entity, entity, vector ) Callback_VortexTriggerProjectileHit
 
-	// for clientside clones to know abt their server counterpart
-	entity svCounterpart
 	#if(false)
 //
 //
@@ -94,6 +92,7 @@ global struct ClientEntityStruct
 	bool canBeMeleed = true
 	bool gravityOrbInteraction
 	int cameraMaxRangeFXHandle = -1
+	float lastGrappleTime
 }
 
 
@@ -154,11 +153,8 @@ global struct ClientPlayerStruct
 
 	array<int> freefallContrailFXHandles
 	int freefallWindEffectHandle = -1
-
-	PropInfo& selectedProp
-	entity currentPropEntity
-	
-	EditorMode& selectedEditorMode
+	int killstreak = 0
+	bool isonkillstreak = false
 }
 
 
